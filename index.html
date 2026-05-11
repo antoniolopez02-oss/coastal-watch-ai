@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coastal Watch AI — SDG 14 prototype</title>
+<style>
+  :root {
+    --navy: #0A2540;
+    --navy-2: #122E55;
+    --blue: #0A97D9;       /* UN SDG 14 */
+    --blue-2: #0782BC;
+    --statblue: #1B4F8C;
+    --ink: #1F2937;
+    --muted: #475569;
+    --hair: #CBD5E1;
+    --paper: #F5FAFD;
+    --paper-2: #EAF4FB;
+    --white: #FFFFFF;
+    --good: #15803D;
+    --warn: #B45309;
+    --bad: #B91C1C;
+    --shadow: 0 1px 3px rgba(10, 37, 64, 0.06), 0 4px 14px rgba(10, 37, 64, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--white); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--blue-2); }
+  a:hover { color: var(--navy); }
+  h1, h2, h3 { font-family: Georgia, serif; color: var(--navy); margin: 0; line-height: 1.2; }
+  h2 { font-size: 32px; }
+  h3 { font-size: 20px; margin-bottom: 12px; }
+  p { margin: 0 0 10px 0; }
+  .small { font-size: 13px; color: var(--muted); }
+  button {
+    font: inherit; cursor: pointer; border: none; padding: 10px 18px; border-radius: 6px;
+    background: var(--navy); color: var(--white); font-weight: 600;
+    transition: background 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: var(--navy-2); }
+  button:disabled { background: var(--hair); color: var(--muted); cursor: not-allowed; }
+  button.primary { background: var(--blue); }
+  button.primary:hover:not(:disabled) { background: var(--blue-2); }
+  button.subtle { background: transparent; color: var(--muted); padding: 4px 10px; }
+  button.subtle:hover { background: var(--paper-2); color: var(--navy); }
+  input[type="password"], input[type="text"] {
+    font: inherit; padding: 10px 14px; border: 1px solid var(--hair); border-radius: 6px;
+    width: 100%; max-width: 400px; background: var(--white); color: var(--ink);
+  }
+  input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(10, 151, 217, 0.15); }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: var(--white);
+    padding: 28px 24px;
+    border-bottom: 4px solid var(--blue);
+  }
+  header .container { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 10px; background: var(--blue);
+    color: var(--white); display: grid; place-items: center;
+    font-family: Georgia, serif; font-size: 19px; font-weight: bold;
+  }
+  header h1 { color: var(--white); font-size: 22px; }
+  header .sdg { font-size: 12px; color: rgba(255,255,255,0.75); letter-spacing: 1.5px; text-transform: uppercase; margin: 0; }
+  header .team { font-size: 12px; color: rgba(255,255,255,0.65); margin: 0; }
+
+  /* Main */
+  main { max-width: 1080px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  /* Hero */
+  .hero { margin-bottom: 36px; }
+  .hero h2 { font-size: 36px; margin-bottom: 10px; }
+  .hero p { color: var(--muted); font-size: 17px; max-width: 700px; }
+
+  /* Cards */
+  .card {
+    background: var(--white); border: 1px solid var(--hair); border-radius: 10px;
+    padding: 22px; margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .card .step {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    color: var(--blue); margin-bottom: 4px;
+  }
+
+  /* Setup */
+  .api-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .api-row input { flex: 1 1 280px; }
+  .key-status {
+    font-size: 13px; padding: 4px 10px; border-radius: 4px;
+  }
+  .key-status.saved { background: #DCFCE7; color: var(--good); }
+  .key-status.unsaved { background: #FEF3C7; color: var(--warn); }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--hair); border-radius: 10px; padding: 36px;
+    text-align: center; cursor: pointer; background: var(--paper);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .drop-zone:hover { border-color: var(--blue); background: var(--paper-2); }
+  .drop-zone.dragover { border-color: var(--blue); background: var(--paper-2); }
+  .drop-zone p { margin: 4px 0; }
+  .drop-zone .icon { font-size: 32px; opacity: 0.5; margin-bottom: 8px; }
+
+  .preview-wrap { display: none; margin-top: 14px; position: relative; }
+  .preview-wrap.show { display: block; }
+  .preview-wrap img { max-width: 100%; max-height: 360px; border-radius: 8px; display: block; box-shadow: var(--shadow); }
+  .preview-wrap .clear-btn { position: absolute; top: 10px; right: 10px; }
+
+  /* Analyze button */
+  .analyze-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .analyze-row button { padding: 12px 24px; font-size: 16px; }
+  .analyze-row .hint { color: var(--muted); font-size: 13px; }
+
+  /* Results */
+  .results { display: none; }
+  .results.show { display: block; }
+  .result-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 720px) { .result-grid { grid-template-columns: 1fr; } }
+  .result-cell {
+    background: var(--paper); border: 1px solid var(--hair); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .result-cell .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .result-cell .value {
+    font-size: 16px; color: var(--ink); font-weight: 500;
+  }
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+  }
+  .badge.LOW { background: #DCFCE7; color: var(--good); }
+  .badge.MEDIUM { background: #FEF3C7; color: var(--warn); }
+  .badge.HIGH { background: #FEE2E2; color: var(--bad); }
+  .badge.bool-true { background: #FEE2E2; color: var(--bad); }
+  .badge.bool-false { background: #DCFCE7; color: var(--good); }
+
+  .alert-card {
+    background: var(--navy); color: var(--white); border-radius: 10px; padding: 18px 20px;
+    margin-top: 6px;
+  }
+  .alert-card .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--blue);
+    margin-bottom: 6px;
+  }
+  .alert-card .msg {
+    font-size: 16px; line-height: 1.45;
+  }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 6px 0; }
+  details[open] summary { color: var(--ink); }
+  pre {
+    background: var(--paper); border: 1px solid var(--hair); border-radius: 6px;
+    padding: 12px; overflow-x: auto; font-size: 12px; color: var(--ink);
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* Status / loading */
+  .status { font-size: 14px; color: var(--muted); }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--hair); border-top-color: var(--blue);
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error {
+    background: #FEE2E2; color: var(--bad); padding: 12px 14px; border-radius: 6px;
+    border: 1px solid #FCA5A5; margin-top: 12px; font-size: 14px;
+  }
+
+  /* Caveats list */
+  .caveats-list { padding-left: 0; list-style: none; }
+  .caveats-list li {
+    padding: 12px 0 12px 18px; border-left: 3px solid var(--blue);
+    margin-bottom: 8px; padding-left: 14px;
+  }
+  .caveats-list li b { color: var(--navy); }
+
+  footer {
+    border-top: 1px solid var(--hair); padding: 20px 24px; margin-top: 40px;
+    text-align: center; color: var(--muted); font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="brand">
+      <div class="logo">CW</div>
+      <div>
+        <h1>Coastal Watch AI</h1>
+        <p class="sdg">UN SDG 14 · Life Below Water</p>
+      </div>
+    </div>
+    <p class="team">Mindy Baker · Anahy Diaz · Antonio Lopez · Francisco Rivas</p>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <h2>An AI eye on California's protected waters.</h2>
+    <p>Upload a coastal photo and get a structured poaching-probability assessment in seconds. Built on Google Gemini 2.5 Flash. Every output is a recommendation for a human ranger to review — never an automated citation.</p>
+  </section>
+
+  <!-- Step 1: API key -->
+  <div class="card">
+    <span class="step">STEP 1</span>
+    <h3>Paste your Gemini API key</h3>
+    <p class="small">Free key from <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a>. Saved only in your browser (localStorage). The key travels directly from your browser to Google's API — it never touches our server, because there is no server.</p>
+    <div class="api-row">
+      <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+      <button id="saveKeyBtn">Save key</button>
+      <button id="clearKeyBtn" class="subtle">Forget</button>
+      <span id="keyStatus" class="key-status unsaved">Not saved</span>
+    </div>
+  </div>
+
+  <!-- Step 2: Upload -->
+  <div class="card">
+    <span class="step">STEP 2</span>
+    <h3>Upload a coastal photo</h3>
+    <p class="small">Try at least three: an obvious poacher (visible nets / lines), an ambiguous case (kayaker, sailboat, research vessel), and an empty stretch of water. The contrast between them is your evidence base for Part 4.</p>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <div class="icon">⬆</div>
+      <p><strong>Drag a photo here</strong>, or click to browse</p>
+      <p class="small">JPG, PNG, or WebP. Max ~20 MB.</p>
+    </div>
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" alt="Uploaded">
+      <button id="clearImgBtn" class="clear-btn subtle">Clear</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Analyze -->
+  <div class="card">
+    <span class="step">STEP 3</span>
+    <h3>Run the analysis</h3>
+    <div class="analyze-row">
+      <button id="analyzeBtn" class="primary" disabled>Analyze with Gemini</button>
+      <span id="analyzeStatus" class="status"></span>
+    </div>
+    <div id="errorBox" class="error" style="display:none;"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="card results" id="resultsCard">
+    <span class="step">ASSESSMENT</span>
+    <h3>What the AI sees</h3>
+
+    <div class="result-grid">
+      <div class="result-cell">
+        <div class="label">Vessel detected</div>
+        <div class="value" id="rVesselPresent">—</div>
+      </div>
+      <div class="result-cell">
+        <div class="label">Vessel type</div>
+        <div class="value" id="rVesselType">—</div>
+      </div>
+      <div class="result-cell">
+        <div class="label">Fishing gear</div>
+        <div class="value" id="rGearVisible">—</div>
+      </div>
+      <div class="result-cell">
+        <div class="label">Gear description</div>
+        <div class="value" id="rGearDesc">—</div>
+      </div>
+      <div class="result-cell">
+        <div class="label">Poaching probability</div>
+        <div class="value" id="rProb">—</div>
+      </div>
+      <div class="result-cell">
+        <div class="label">Reason</div>
+        <div class="value" id="rReason">—</div>
+      </div>
+    </div>
+
+    <div class="alert-card">
+      <div class="label">RANGER ALERT (would be sent to phone)</div>
+      <div class="msg" id="rAlert">—</div>
+    </div>
+
+    <details>
+      <summary>Raw response from Gemini</summary>
+      <pre id="rawResponse"></pre>
+    </details>
+  </div>
+
+  <!-- Caveats -->
+  <div class="card">
+    <h3>What this can't do</h3>
+    <ul class="caveats-list">
+      <li><b>False alarms.</b> Research vessels, kayakers, and rescue boats can all look suspicious in a still photo. Treat every output as one frame's worth of evidence — not a verdict.</li>
+      <li><b>Blind weather.</b> Fog, glare, rain, and night blind the camera. The AI can't replace human surveillance during the conditions a poacher would choose on purpose.</li>
+      <li><b>Privacy spillover.</b> Photos go to Google's servers. Don't upload images of identifiable people, license plates, or anything that wasn't meant to be on camera.</li>
+      <li><b>Boundary blur.</b> A boat fishing legally just outside a reserve looks identical to one inside it. The model can't see the line on the water.</li>
+    </ul>
+  </div>
+
+</main>
+
+<footer>
+  <p>Class prototype · Built for the AI for Social Good project, MIS · Spring 2026 · Not an enforcement tool.</p>
+</footer>
+
+<script>
+(() => {
+  // ----- Element refs -----
+  const apiKeyInput = document.getElementById('apiKey');
+  const saveKeyBtn = document.getElementById('saveKeyBtn');
+  const clearKeyBtn = document.getElementById('clearKeyBtn');
+  const keyStatus = document.getElementById('keyStatus');
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewImg = document.getElementById('previewImg');
+  const clearImgBtn = document.getElementById('clearImgBtn');
+
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const analyzeStatus = document.getElementById('analyzeStatus');
+  const errorBox = document.getElementById('errorBox');
+
+  const resultsCard = document.getElementById('resultsCard');
+  const rVesselPresent = document.getElementById('rVesselPresent');
+  const rVesselType = document.getElementById('rVesselType');
+  const rGearVisible = document.getElementById('rGearVisible');
+  const rGearDesc = document.getElementById('rGearDesc');
+  const rProb = document.getElementById('rProb');
+  const rReason = document.getElementById('rReason');
+  const rAlert = document.getElementById('rAlert');
+  const rawResponse = document.getElementById('rawResponse');
+
+  // ----- State -----
+  let currentImage = null; // {dataUrl, base64, mimeType}
+
+  // ----- API key handling -----
+  const KEY_STORAGE = 'coastalwatch.apiKey';
+
+  function loadKey() {
+    const k = localStorage.getItem(KEY_STORAGE);
+    if (k) {
+      apiKeyInput.value = k;
+      keyStatus.textContent = 'Saved in this browser';
+      keyStatus.className = 'key-status saved';
+    }
+    updateAnalyzeButton();
+  }
+  function saveKey() {
+    const k = apiKeyInput.value.trim();
+    if (!k) {
+      keyStatus.textContent = 'No key entered';
+      keyStatus.className = 'key-status unsaved';
+      return;
+    }
+    localStorage.setItem(KEY_STORAGE, k);
+    keyStatus.textContent = 'Saved in this browser';
+    keyStatus.className = 'key-status saved';
+    updateAnalyzeButton();
+  }
+  function clearKey() {
+    localStorage.removeItem(KEY_STORAGE);
+    apiKeyInput.value = '';
+    keyStatus.textContent = 'Cleared';
+    keyStatus.className = 'key-status unsaved';
+    updateAnalyzeButton();
+  }
+  saveKeyBtn.addEventListener('click', saveKey);
+  clearKeyBtn.addEventListener('click', clearKey);
+  apiKeyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveKey(); });
+
+  // ----- Image handling -----
+  function setImage(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      showError('Please choose an image file (JPG, PNG, WebP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(',')[1];
+      currentImage = { dataUrl, base64, mimeType: file.type };
+      previewImg.src = dataUrl;
+      previewWrap.classList.add('show');
+      hideError();
+      hideResults();
+      updateAnalyzeButton();
+    };
+    reader.readAsDataURL(file);
+  }
+  function clearImage() {
+    currentImage = null;
+    previewImg.src = '';
+    previewWrap.classList.remove('show');
+    fileInput.value = '';
+    hideResults();
+    updateAnalyzeButton();
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) setImage(e.target.files[0]);
+  });
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) setImage(e.dataTransfer.files[0]);
+  });
+  clearImgBtn.addEventListener('click', clearImage);
+
+  // ----- Analyze -----
+  function updateAnalyzeButton() {
+    const hasKey = !!localStorage.getItem(KEY_STORAGE);
+    const hasImage = !!currentImage;
+    analyzeBtn.disabled = !(hasKey && hasImage);
+    if (!hasKey && !hasImage) analyzeStatus.textContent = 'Need API key and an image.';
+    else if (!hasKey) analyzeStatus.textContent = 'Need API key.';
+    else if (!hasImage) analyzeStatus.textContent = 'Need an image.';
+    else analyzeStatus.textContent = 'Ready.';
+  }
+
+  const PROMPT = `You are an automated marine protected area monitoring assistant.
+
+Look at this photo, taken from a shore camera at a California Marine Protected Area where commercial fishing is prohibited. Analyze it and return ONLY a JSON object with this exact shape, no extra text or commentary, no markdown fences:
+
+{
+  "vessel_present": true or false,
+  "vessel_type": "string (e.g., 'kayak', 'fishing boat', 'sailboat', 'none')",
+  "fishing_gear_visible": true or false,
+  "gear_description": "string or 'none'",
+  "poaching_probability": "LOW" | "MEDIUM" | "HIGH",
+  "reason": "one sentence explaining the score",
+  "ranger_alert": "string under 160 characters, the message a ranger would receive on their phone"
+}`;
+
+  async function analyze() {
+    if (!currentImage) return;
+    const apiKey = localStorage.getItem(KEY_STORAGE);
+    if (!apiKey) return;
+
+    analyzeBtn.disabled = true;
+    analyzeStatus.innerHTML = '<span class="spinner"></span> Calling Gemini…';
+    hideError();
+    hideResults();
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const body = {
+      contents: [{
+        parts: [
+          { text: PROMPT },
+          { inline_data: { mime_type: currentImage.mimeType, data: currentImage.base64 } }
+        ]
+      }]
+    };
+
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!r.ok) {
+        const errText = await r.text();
+        let msg = `HTTP ${r.status}`;
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error && errJson.error.message) msg = errJson.error.message;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const data = await r.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) throw new Error('Empty response from Gemini.');
+
+      rawResponse.textContent = text;
+
+      // Try to parse JSON. Gemini sometimes wraps in ``` fences despite instructions.
+      let parsed = null;
+      const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (e) {
+        // fallback: look for first {...} block
+        const m = cleaned.match(/\{[\s\S]*\}/);
+        if (m) {
+          try { parsed = JSON.parse(m[0]); } catch {}
+        }
+      }
+
+      if (!parsed) {
+        showError('Got a response but could not parse it as JSON. See raw response below.');
+        showResults(null);
+      } else {
+        showResults(parsed);
+      }
+    } catch (err) {
+      showError('Gemini call failed: ' + err.message);
+    } finally {
+      analyzeBtn.disabled = false;
+      updateAnalyzeButton();
+    }
+  }
+  analyzeBtn.addEventListener('click', analyze);
+
+  // ----- Results rendering -----
+  function showResults(parsed) {
+    if (parsed) {
+      const vp = !!parsed.vessel_present;
+      rVesselPresent.innerHTML = `<span class="badge bool-${vp}">${vp ? 'YES' : 'NO'}</span>`;
+      rVesselType.textContent = parsed.vessel_type || '—';
+
+      const gv = !!parsed.fishing_gear_visible;
+      rGearVisible.innerHTML = `<span class="badge bool-${gv}">${gv ? 'YES' : 'NO'}</span>`;
+      rGearDesc.textContent = parsed.gear_description || '—';
+
+      const prob = (parsed.poaching_probability || '').toUpperCase();
+      rProb.innerHTML = ['LOW','MEDIUM','HIGH'].includes(prob)
+        ? `<span class="badge ${prob}">${prob}</span>`
+        : (prob || '—');
+      rReason.textContent = parsed.reason || '—';
+      rAlert.textContent = parsed.ranger_alert || '—';
+    }
+    resultsCard.classList.add('show');
+    analyzeStatus.textContent = 'Done.';
+  }
+  function hideResults() {
+    resultsCard.classList.remove('show');
+  }
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+    analyzeStatus.textContent = '';
+  }
+  function hideError() {
+    errorBox.style.display = 'none';
+  }
+
+  // ----- Init -----
+  loadKey();
+  updateAnalyzeButton();
+})();
+</script>
+
+</body>
+</html>
