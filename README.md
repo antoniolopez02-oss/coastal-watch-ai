@@ -76,7 +76,6 @@ We chose Gemini over a narrower computer-vision classifier because Gemini writes
 |------|------------|
 | `CoastalWatchAI_Prototype.ipynb` | The working prototype, adapted from Lab 3. Outputs preserved. |
 | `Coastal_Watch_AI_Deck.pptx` | 6-slide pitch deck for the UN council format. |
-| `CoastalWatch_Pitch_Script.docx` | 1-minute spoken script. |
 | `index.html` | Live web demo. Visitors paste their own Gemini API key and upload a photo. |
 | `README.md` | This file. |
 
